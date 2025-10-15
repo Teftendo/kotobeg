@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  />
+  <title>Дашулькин Котобег 💖</title>
+  <style>
+    :root{
+      --bg:#0f1226; --fg:#fff; --accent:#ff4fd8; --accent-2:#7cf3ff;
+      --ground:#1d2147; --obstacle:#ffcf4a; --shadow:#00000040; --tile:#181b39;
+      --bad:#ff5a5a; --good:#76ffb0;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    html{ touch-action: manipulation; }
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      color:var(--fg);
+      background:
+        radial-gradient(1200px 600px at 70% -100px, #22286300 30%, #222863 60%, #111538 100%),
+        linear-gradient(180deg, #090b1d 0%, #0b0e26 100%);
+      background-color:var(--bg);
+      display:flex; align-items:center; justify-content:center; overflow:hidden;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+    }
+    .container{
+      width:min(100vw, 860px); aspect-ratio: 16 / 9; position:relative; border-radius:16px;
+      box-shadow: 0 20px 50px var(--shadow), inset 0 0 0 1px #ffffff10;
+      background: linear-gradient(180deg, #0e1230 0%, #0a0d25 55%, #090c20 100%);
+      overflow:hidden;
+      touch-action: none; /* вся жестовая обработка внутри игры */
+    }
+
+    /* Экраны/кнопки */
+    .screen{
+      position:absolute; inset:0; display:flex; flex-direction:column; gap:16px;
+      align-items:center; justify-content:center; z-index:10;
+      background: linear-gradient(180deg,#0a0d25aa 0,#0a0d25f0 30%, #0a0d25aa 100%);
+      backdrop-filter: blur(6px); text-align:center; padding:24px;
+    }
+    .title{font-size:clamp(22px,3.2vw,34px); font-weight:800; letter-spacing:.5px}
+    .subtitle{opacity:.8}
+    .btn{
+      margin-top:10px; cursor:pointer; border:0; padding:14px 24px; border-radius:999px; font-weight:700;
+      color:#0b0e26; background:linear-gradient(90deg,var(--accent) 0%, var(--accent-2) 100%);
+      box-shadow:0 8px 24px #0008, inset 0 0 1px #fff6; transition: transform .08s ease;
+      touch-action: manipulation;
+    }
+    .btn:active{ transform: translateY(1px) scale(0.99) }
+    .hidden{ display:none !important }
+
+    /* HUD */
+    .hud{ position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between; z-index:5; }
+    .pill{
+      background:#ffffff12; padding:8px 12px; border-radius:999px; box-shadow: inset 0 0 0 1px #ffffff14;
+      font-variant-numeric: tabular-nums; margin-right:10px;
+    }
+    .hud-left{ display:flex; gap:10px; align-items:center; }
+    #pauseBtn{
+      border:0; cursor:pointer; border-radius:10px; padding:8px 12px;
+      background:#ffffff12; color:var(--fg); font-weight:700;
+      box-shadow: inset 0 0 0 1px #ffffff14;
+      touch-action: manipulation;
+    }
+    .banner{
+      position:absolute; top:56px; left:50%; transform:translateX(-50%);
+      padding:8px 14px; border-radius:10px; background:#ffffff18; box-shadow: inset 0 0 0 1px #ffffff22;
+      z-index:6; white-space:nowrap; font-weight:800; letter-spacing:.4px; display:none;
+    }
+    .banner.good{ color:var(--good) }
+    .banner.bad{ color:var(--bad) }
+
+    /* Сцена */
+    #scene{ position:absolute; inset:0; overflow:hidden; }
+    #sky{
+      position:absolute; inset:0; opacity:.55;
+      background-image:
+        radial-gradient(2px 2px at 20% 20%, #fff8 30%, #fff0 31%),
+        radial-gradient(1.5px 1.5px at 70% 40%, #fff6 30%, #fff0 31%),
+        radial-gradient(1.2px 1.2px at 40% 70%, #fff5 30%, #fff0 31%),
+        radial-gradient(1.4px 1.4px at 10% 55%, #fff7 30%, #fff0 31%);
+      background-repeat:repeat; background-size: 600px 300px, 500px 280px, 500px 280px, 600px 330px;
+    }
+    #ground{
+      position:absolute; left:0; right:0; height:26%; bottom:0;
+      background: repeating-linear-gradient(90deg, var(--tile) 0px, var(--tile) 26px, #121433 26px, #121433 32px);
+      box-shadow: 0 -10px 30px #0008 inset, 0 -1px 0 #ffffff10 inset;
+    }
+
+    /* Сущности */
+    .entity{ position:absolute; left:0; will-change:transform; }
+    #cat{
+      width:min(9vmin,60px); height:min(9vmin,60px);
+      left:12%; bottom:26%; display:grid; place-items:center; user-select:none;
+      text-shadow: 0 3px 0 #0006, 0 0 10px #0008; font-size:clamp(28px,6vmin,42px);
+      filter: drop-shadow(0 10px 6px var(--shadow));
+    }
+    #cat.run{ animation:run-bob .25s infinite linear }
+    @keyframes run-bob { 0%,100%{ transform:translateY(0)} 50%{ transform:translateY(1.5px)} }
+    .obstacle{
+      width:min(3.6vmin,28px); height:min(8.5vmin,52px); bottom:26%; border-radius:6px;
+      background: linear-gradient(180deg,#ffe391 0%, var(--obstacle) 60%, #f3b929 100%);
+      box-shadow: 0 8px 12px var(--shadow), inset 0 0 0 1px #0002;
+    }
+    .powerup{
+      width:min(7vmin,44px); height:min(7vmin,44px); bottom:calc(26% + 10px);
+      display:grid; place-items:center; font-size:clamp(22px,5.5vmin,32px);
+      filter: drop-shadow(0 8px 6px var(--shadow));
+    }
+    .powerup.fish{
+      text-shadow: 0 0 6px #74ffd2, 0 0 12px #74ffd2;
+      animation: fishGlow 1.2s ease-in-out infinite;
+    }
+    .powerup.choco{
+      text-shadow: 0 0 6px #ff8b8b, 0 0 12px #ff8b8b;
+      animation: chocoBlink 0.8s linear infinite;
+    }
+    @keyframes fishGlow{
+      0%,100%{ opacity: 1;   filter: drop-shadow(0 8px 8px rgba(116,255,210,.45)); }
+      50%   { opacity: 0.9;  filter: drop-shadow(0 8px 12px rgba(116,255,210,.75)); }
+    }
+    @keyframes chocoBlink{ 0%,100%{ opacity:1 } 50%{ opacity:.65 } }
+
+    /* Overlay */
+    .overlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:9; }
+    .card{
+      padding:18px 20px; border-radius:14px; text-align:center;
+      background:#0c102eec; box-shadow: 0 10px 40px #000a, inset 0 0 0 1px #ffffff14; min-width:min(70%, 520px);
+    }
+    .card h2{ margin-bottom:6px } .card p{ opacity:.8 } .card .row{ display:flex; gap:12px; justify-content:center; margin-top:14px }
+    .kbd{ font-variant:all-small-caps; letter-spacing:.4px; font-weight:700; background:#ffffff14; padding:6px 10px; border-radius:8px; box-shadow: inset 0 0 0 1px #ffffff18; }
+
+    /* Мобильный UX: зона прыжка и кнопка */
+    .jump-zone{
+      position:absolute; inset:0; z-index:4; /* под HUD, над сценой */
+      background: transparent; /* кликабельный слой */
+    }
+    .jump-btn{
+      position:absolute; bottom:10px; right:10px; z-index:7;
+      border:0; border-radius:14px; padding:14px 18px; font-weight:800;
+      background:#ffffff1f; color:#fff; box-shadow: inset 0 0 0 1px #ffffff3a, 0 6px 16px #0008;
+      display:none; touch-action: manipulation;
+    }
+    @media (hover:none) and (pointer:coarse){
+      .jump-btn{ display:block; }
+      #pauseBtn{ padding:12px 16px; font-size:16px }
+      .btn{ padding:16px 22px }
+    }
+  </style>
+</head>
+<body>
+  <main class="container" aria-label="Игра: котик-прыгун">
+    <!-- HUD -->
+    <div class="hud">
+      <div class="hud-left">
+        <div class="pill">Очки: <b id="score">0</b></div>
+        <div class="pill">Рекорд: <b id="best">0</b></div>
+      </div>
+      <button id="pauseBtn" title="Пауза (P)">⏸</button>
+    </div>
+    <div id="banner" class="banner">...</div>
+
+    <!-- Сцена -->
+    <div id="scene" role="application" aria-live="polite">
+      <div id="sky"></div>
+      <div id="ground"></div>
+      <div id="cat" class="entity run" aria-label="Котик" title="Прыгай!">🐱</div>
+      <!-- Динамические сущности -->
+      <div id="jumpZone" class="jump-zone" aria-hidden="true"></div>
+    </div>
+    <button id="jumpBtn" class="jump-btn" aria-label="Прыжок">Прыжок ⤴</button>
+
+    <!-- Старт -->
+    <section id="start" class="screen">
+      <div>
+        <div class="title">Котобег 🐾</div>
+        <p class="subtitle">Тапай по экрану или жми кнопку «Прыжок». Подбери 🐟, избегай 🍫!</p>
+        <button id="playBtn" class="btn">Играть</button>
+        <div class="row" style="margin-top:12px">
+          <div class="kbd">Пробел</div><div class="kbd">W</div><div class="kbd">↑</div><div class="kbd">Тап</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Гейм-овер -->
+    <div id="gameOver" class="overlay hidden">
+      <div class="card">
+        <h2>Ох! Котик споткнулся…</h2>
+        <p>Очки: <b id="finalScore">0</b> • Рекорд: <b id="finalBest">0</b></p>
+        <div class="row">
+          <button id="againBtn" class="btn">Сыграть ещё</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // === Настройки баланса ===
+    const CONFIG = {
+      baseSpeed: 240, speedPerPoint: 0.28, gravity: 2100, jumpVelocity: 750,
+      minObstacleGap: 260, maxObstacleGap: 520,
+      scorePerSecond: 3, obstacleBonus: 8, collisionPad: 6,
+      fishDuration: 1.5, fishSpeedMul: 1.6, fishScoreMul: 2.0,
+      chocoDuration: 3.0, chocoSpeedMul: 1.35, chocoGapMul: 0.65,
+      fishEveryMinMax: [5*1.1, 10*1.1],
+      chocoEveryMinMax: [12*1.1, 20*1.1]
+    };
+
+    // === DOM ===
+    const scene = document.getElementById('scene');
+    const ground = document.getElementById('ground');
+    const sky = document.getElementById('sky');
+    const cat = document.getElementById('cat');
+    const scoreEl = document.getElementById('score');
+    const bestEl = document.getElementById('best');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const banner = document.getElementById('banner');
+    const jumpZone = document.getElementById('jumpZone');
+    const jumpBtn = document.getElementById('jumpBtn');
+
+    const startScreen = document.getElementById('start');
+    const playBtn = document.getElementById('playBtn');
+
+    const over = document.getElementById('gameOver');
+    const finalScoreEl = document.getElementById('finalScore');
+    const finalBestEl = document.getElementById('finalBest');
+    const againBtn = document.getElementById('againBtn');
+
+    // === Состояние ===
+    let obstacles = [];
+    let powerups = [];
+    let running = false, paused = false;
+    let raf = 0, last = 0;
+
+    let catY = 0, vy = 0;
+
+    let scoreFloat = 0, score = 0;
+    let best = parseInt(localStorage.getItem('cat_best') || '0', 10);
+    bestEl.textContent = best;
+
+    let pxPerSec = CONFIG.baseSpeed;
+    let spawnAtX = 0, worldX = 0;
+
+    let t = 0, fishUntil = 0, chocoUntil = 0;
+
+    const rand = (a,b)=>a + Math.random()*(b-a);
+    let nextFishAt = 0, nextChocoAt = 0;
+
+    // === Утилиты ===
+    function setBanner(text, kind='good'){ banner.textContent = text; banner.className = 'banner ' + (kind==='bad'?'bad':'good'); banner.style.display='block'; }
+    function hideBanner(){ banner.style.display='none'; }
+
+    function resetGame() {
+      obstacles.forEach(o => o.el.remove());
+      powerups.forEach(p => p.el.remove());
+      obstacles = []; powerups = [];
+
+      catY = 0; vy = 0;
+      cat.style.transform = `translate(0,0)`;
+      cat.classList.add('run');
+
+      scoreFloat = 0; score = 0; scoreEl.textContent = '0';
+      pxPerSec = CONFIG.baseSpeed;
+      worldX = 0; t = 0;
+      fishUntil = 0; chocoUntil = 0;
+      hideBanner();
+
+      spawnAtX = randomGap();
+      nextFishAt = rand(...CONFIG.fishEveryMinMax);
+      nextChocoAt = rand(...CONFIG.chocoEveryMinMax);
+
+      over.classList.add('hidden');
+    }
+
+    function isFish(){ return t < fishUntil; }
+    function isChoco(){ return t < chocoUntil; }
+
+    function randomGap(){
+      let base = CONFIG.minObstacleGap + Math.random()*(CONFIG.maxObstacleGap - CONFIG.minObstacleGap);
+      const speedFactor = pxPerSec / CONFIG.baseSpeed;
+      base = base / speedFactor;
+      if(isChoco()) base *= CONFIG.chocoGapMul;
+      return base;
+    }
+
+    function spawnObstacle(){
+      const el = document.createElement('div');
+      el.className = 'entity obstacle';
+      scene.appendChild(el);
+      const startX = scene.clientWidth;
+      const obj = { el, x: startX, w: el.offsetWidth, h: el.offsetHeight };
+      el.style.transform = `translateX(${startX}px)`;
+      obstacles.push(obj);
+    }
+
+    function spawnPowerup(type){
+      const el = document.createElement('div');
+      el.className = `entity powerup ${type}`;
+      el.textContent = (type==='fish') ? '🐟' : '🍫';
+      scene.appendChild(el);
+      const startX = scene.clientWidth;
+      const obj = { el, x: startX, w: el.offsetWidth, h: el.offsetHeight, type };
+      el.style.transform = `translateX(${startX}px)`;
+      powerups.push(obj);
+    }
+
+    function startGame(){
+      startScreen.classList.add('hidden');
+      resetGame();
+      running = true; paused = false; pauseBtn.textContent='⏸';
+      last = performance.now();
+      raf = requestAnimationFrame(loop);
+    }
+
+    function setPause(state){
+      if(!running) return;
+      paused = state ?? !paused;
+      pauseBtn.textContent = paused ? '▶' : '⏸';
+      if(!paused){
+        last = performance.now();
+        raf = requestAnimationFrame(loop);
+      }
+    }
+
+    function gameOver(){
+      running = false; paused = false; cat.classList.remove('run'); vy = 0;
+      hideBanner();
+      if(score > best){ best = score; localStorage.setItem('cat_best', String(best)); }
+      finalScoreEl.textContent = score; finalBestEl.textContent = best;
+      over.classList.remove('hidden');
+    }
+
+    function loop(now){
+      const dt = Math.min(0.032, (now - last) / 1000);
+      last = now;
+      if(paused || !running) return;
+      update(dt);
+      if(!paused && running) raf = requestAnimationFrame(loop);
+    }
+
+    function update(dt){
+      t += dt;
+
+      let speedMul = 1, scoreMul = 1;
+      if(isFish()){ speedMul *= CONFIG.fishSpeedMul; scoreMul *= CONFIG.fishScoreMul; }
+      if(isChoco()){ speedMul *= CONFIG.chocoSpeedMul; }
+
+      pxPerSec = (CONFIG.baseSpeed + CONFIG.speedPerPoint * score) * speedMul;
+
+      worldX += pxPerSec * dt;
+      sky.style.backgroundPositionX =
+        `-${worldX * 0.15}px, -${worldX * 0.21}px, -${worldX * 0.12}px, -${worldX * 0.18}px`;
+      ground.style.backgroundPositionX = `-${worldX * 0.9}px`;
+
+      vy -= CONFIG.gravity * dt;
+      catY = Math.max(0, catY + vy * dt);
+      if(catY === 0 && vy < 0){ vy = 0; cat.classList.add('run'); }
+      cat.style.transform = `translate(0px, ${-catY}px)`;
+
+      if(worldX >= spawnAtX){
+        if(!isFish()) spawnObstacle();
+        spawnAtX = worldX + randomGap();
+      }
+
+      const catBox = getBox(cat, CONFIG.collisionPad);
+
+      for(let i=obstacles.length-1; i>=0; i--){
+        const o = obstacles[i];
+        o.x -= pxPerSec * dt;
+        o.el.style.transform = `translateX(${o.x}px)`;
+
+        if(isFish()){
+          const catFrontX = getEntityX(cat);
+          if(o.x + o.w > catFrontX){ o.el.remove(); obstacles.splice(i,1); continue; }
+        }
+
+        if(o.x + o.w < -20){
+          o.el.remove(); obstacles.splice(i,1);
+          scoreFloat += CONFIG.obstacleBonus * scoreMul;
+        } else {
+          const obox = getBoxFrom(o.el, CONFIG.collisionPad);
+          if(intersects(catBox, obox)){ gameOver(); return; }
+        }
+      }
+
+      for(let i=powerups.length-1; i>=0; i--){
+        const p = powerups[i];
+        p.x -= pxPerSec * dt;
+        p.el.style.transform = `translateX(${p.x}px)`;
+
+        if(p.x + p.w < -20){ p.el.remove(); powerups.splice(i,1); continue; }
+
+        const pbox = getBoxFrom(p.el, 4);
+        if(intersects(catBox, pbox)){
+          if(p.type==='fish'){
+            fishUntil = t + CONFIG.fishDuration;
+            setBanner('🐟 Супер-рыбка! Скорость и очки ↑', 'good');
+            const catFrontX = getEntityX(cat);
+            obstacles = obstacles.filter(o=>{
+              if(o.x + o.w > catFrontX){ o.el.remove(); return false; }
+              return true;
+            });
+          }else if(p.type==='choco'){
+            chocoUntil = t + CONFIG.chocoDuration;
+            setBanner('КОТИКАМ НЕЛЬЗЯ ШОКОЛАД!!!!!', 'bad');
+          }
+          p.el.remove(); powerups.splice(i,1); continue;
+        }
+      }
+
+      scoreFloat += CONFIG.scorePerSecond * dt * scoreMul;
+      const newScore = Math.floor(scoreFloat);
+      if(newScore !== score){ score = newScore; scoreEl.textContent = score; bestEl.textContent = best; }
+
+      if(t >= nextFishAt){ spawnPowerup('fish'); nextFishAt = t + rand(...CONFIG.fishEveryMinMax); }
+      if(t >= nextChocoAt){ spawnPowerup('choco'); nextChocoAt = t + rand(...CONFIG.chocoEveryMinMax); }
+    }
+
+    // === Геометрия ===
+    function getBox(el, pad=0){
+      const r = el.getBoundingClientRect(), s = scene.getBoundingClientRect();
+      return { x: r.left - s.left + pad, y: r.top - s.top + pad, w: r.width - pad*2, h: r.height - pad*2 };
+    }
+    function getBoxFrom(el, pad=0){
+      const r = el.getBoundingClientRect(), s = scene.getBoundingClientRect();
+      return { x: r.left - s.left + pad, y: r.top - s.top + pad, w: r.width - pad*2, h: r.height - pad*2 };
+    }
+    function getEntityX(el){
+      const r = el.getBoundingClientRect(), s = scene.getBoundingClientRect();
+      return r.left - s.left;
+    }
+    function intersects(a,b){
+      return !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
+    }
+
+    // === Управление ===
+    function wantJump(){
+      if(catY === 0 && running && !paused){
+        vy = CONFIG.jumpVelocity;
+        cat.classList.remove('run');
+      }
+    }
+
+    // Клавиатура (ПК)
+    document.addEventListener('keydown', (e)=>{
+      if(e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp'){
+        e.preventDefault(); wantJump();
+      } else if(e.code === 'KeyP' || e.code === 'Escape'){
+        setPause();
+      }
+    });
+
+    // Тап/клик — надёжный набор слушателей
+    const jumpEv = (e)=>{ e.preventDefault && e.preventDefault(); wantJump(); };
+    // pointer (современные браузеры)
+    jumpZone.addEventListener('pointerdown', jumpEv, {passive:false});
+    scene.addEventListener('pointerdown', jumpEv, {passive:false});
+    // touch fallback (старые iOS/в редких webview)
+    jumpZone.addEventListener('touchstart', jumpEv, {passive:false});
+    scene.addEventListener('touchstart', jumpEv, {passive:false});
+    // click fallback
+    jumpZone.addEventListener('click', jumpEv, {passive:false});
+    scene.addEventListener('click', jumpEv, {passive:false});
+    // отдельная кнопка
+    jumpBtn.addEventListener('pointerdown', jumpEv, {passive:false});
+    jumpBtn.addEventListener('click', jumpEv, {passive:false});
+    pauseBtn.addEventListener('click', ()=>setPause());
+
+    playBtn.addEventListener('click', startGame);
+    againBtn.addEventListener('click', ()=>{
+      resetGame(); running = true; paused = false; pauseBtn.textContent='⏸';
+      last = performance.now(); raf = requestAnimationFrame(loop);
+    });
+
+    // Ресайз
+    let resizeTimer=0;
+    window.addEventListener('resize', ()=>{
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(()=>{
+        obstacles.forEach(o => { o.w = o.el.offsetWidth; o.h = o.el.offsetHeight; o.el.style.transform = `translateX(${o.x}px)`; });
+        powerups.forEach(p => { p.w = p.el.offsetWidth; p.h = p.el.offsetHeight; p.el.style.transform = `translateX(${p.x}px)`; });
+      },120);
+    });
+  </script>
+</body>
+</html>
