@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Дашулькин Котобег💖</title>
+  <title>Дашулькин Котобег 💖</title>
   <style>
     :root{
       --bg:#0f1226; --fg:#fff; --accent:#ff4fd8; --accent-2:#7cf3ff;
@@ -32,22 +32,18 @@
       -webkit-tap-highlight-color: transparent; user-select:none;
     }
 
-    /* Десктоп fallback (16:9) */
     .container{
       width:min(92vw, 980px);
       aspect-ratio:16/9;
       position:relative; border-radius:16px;
       box-shadow:0 20px 50px var(--shadow), inset 0 0 0 1px #ffffff10;
       background: linear-gradient(180deg, #0e1230 0%, #0a0d25 55%, #090c20 100%);
-      overflow:hidden; touch-action:none;
-      contain: paint;
+      overflow:hidden; touch-action:none; contain: paint;
     }
-    /* Мобильный: на весь экран */
     @media (hover:none) and (pointer:coarse){
       .container{ width:100vw; height:calc(var(--vh)*100); border-radius:0; box-shadow:none }
     }
 
-    /* Экраны */
     .screen{
       position:absolute; inset:0; display:flex; flex-direction:column; gap:16px;
       align-items:center; justify-content:center; z-index:10;
@@ -65,12 +61,10 @@
     .btn:active{ transform: translateY(1px) scale(.99) }
     .hidden{ display:none !important }
 
-    /* HUD */
     .hud{
       position:absolute; top:10px; left:10px; right:10px;
       display:flex; justify-content:space-between; align-items:center; z-index:5;
-      font-size:var(--hud-font);
-      pointer-events:none;
+      font-size:var(--hud-font); pointer-events:none;
     }
     .pills{ display:flex; gap:10px; pointer-events:auto; }
     .pill{
@@ -79,7 +73,7 @@
     }
     #pauseBtn{
       border:0; cursor:pointer; border-radius:14px; padding:.55em .8em;
-      background:#ffffff18; color:var(--fg); font-weight:800;
+      background:#ffffff18; color:#fff; font-weight:800;
       box-shadow: inset 0 0 0 1px #ffffff28; touch-action:manipulation;
       font-size:clamp(16px, 4.8vmin, 20px); pointer-events:auto;
     }
@@ -91,7 +85,6 @@
     }
     .banner.good{ color:var(--good) } .banner.bad{ color:var(--bad) }
 
-    /* Сцена */
     #scene{ position:absolute; inset:0; overflow:hidden }
     #sky{
       position:absolute; inset:0; opacity:.55;
@@ -108,7 +101,6 @@
       box-shadow: 0 -10px 30px #000a inset, 0 -1px 0 #ffffff14 inset;
     }
 
-    /* Сущности */
     .entity{ position:absolute; left:0; will-change:transform }
     #cat{
       width:var(--cat-size); height:var(--cat-size);
@@ -135,7 +127,6 @@
     @keyframes fishGlow{ 0%,100%{opacity:1;filter:drop-shadow(0 8px 8px rgba(116,255,210,.45))} 50%{opacity:.9;filter:drop-shadow(0 8px 12px rgba(116,255,210,.75))}}
     @keyframes chocoBlink{ 0%,100%{opacity:1} 50%{opacity:.65} }
 
-    /* Overlay */
     .overlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:9 }
     .card{
       padding:18px 20px; border-radius:14px; text-align:center;
@@ -146,7 +137,6 @@
     .card .row{ display:flex; gap:12px; justify-content:center; margin-top:14px }
     .kbd{ font-variant:all-small-caps; letter-spacing:.4px; font-weight:800; background:#ffffff14; padding:6px 10px; border-radius:8px; box-shadow: inset 0 0 0 1px #ffffff18 }
 
-    /* Мобильные контролы */
     .jump-zone{ position:absolute; inset:0; z-index:4; background:transparent }
   </style>
 </head>
@@ -171,7 +161,7 @@
     <section id="start" class="screen">
       <div>
         <div class="title">Котобег 🐾</div>
-        <p class="subtitle">Подбери 🐟 — суперскорость и быстрые очки. Избегай 🍫 — станет сложнее!</p>
+        <p class="subtitle">Подбери 🐟 — суперскорость и быстрые очки. Избегай 🍫 — будет сложнее!</p>
         <button id="playBtn" class="btn">Играть</button>
       </div>
     </section>
@@ -196,14 +186,15 @@
     const CONFIG = {
       baseSpeed: 250, speedPerPoint: 0.30,
       gravity: 2300, jumpVelocity: 820,
+      fallGravityMul: 1.25,     // быстрее падаем => быстрее готов к новому прыжку
+      coyoteTime: 0.12,         // 120 мс после схода с земли всё ещё можно прыгнуть
+      jumpBuffer: 0.15,         // 150 мс до касания — буфер нажатия
       minObstacleGap: 280, maxObstacleGap: 560,
-      scorePerSecond: 3.45,           // +15% к прежним 3.0
-      obstacleBonus: 8, collisionPad: 6,
+      scorePerSecond: 3.45, obstacleBonus: 8, collisionPad: 6,
       fishDuration: 1.5, fishSpeedMul: 1.6, fishScoreMul: 2.0,
       chocoDuration: 3.0, chocoSpeedMul: 1.35, chocoGapMul: 0.65,
-      // реже ещё на 10%
-      fishEveryMinMax: [5.5*1.1, 11*1.1],        // было [5.5, 11]
-      chocoEveryMinMax: [13.2*1.1, 22*1.1]       // было [13.2, 22]
+      fishEveryMinMax: [5.5*1.1, 11*1.1],
+      chocoEveryMinMax: [13.2*1.1, 22*1.1]
     };
 
     // --- DOM ---
@@ -227,6 +218,7 @@
     let obstacles=[], powerups=[];
     let running=false, paused=false, raf=0, last=0;
     let catY=0, vy=0;
+    let onGround=true, timeSinceGrounded=0, timeSinceJumpPressed=999;
     let scoreFloat=0, score=0;
     let best=parseInt(localStorage.getItem('cat_best')||'0',10); bestEl.textContent=best;
     let pxPerSec=CONFIG.baseSpeed, spawnAtX=0, worldX=0;
@@ -237,13 +229,18 @@
     // --- Вспомогательные ---
     function setBanner(text,kind='good'){ banner.textContent=text; banner.className='banner '+(kind==='bad'?'bad':'good'); banner.style.display='block'; }
     function hideBanner(){ banner.style.display='none'; }
-    function isFish(){ return t<fishUntil } function isChoco(){ return t<chocoUntil }
+    const isFish=()=> t<fishUntil, isChoco=()=> t<chocoUntil;
     function randomGap(){ let base=CONFIG.minObstacleGap+Math.random()*(CONFIG.maxObstacleGap-CONFIG.minObstacleGap); const speedFactor=pxPerSec/CONFIG.baseSpeed; base/=speedFactor; if(isChoco()) base*=CONFIG.chocoGapMul; return base; }
 
     function resetGame(){
       obstacles.forEach(o=>o.el.remove()); powerups.forEach(p=>p.el.remove());
-      obstacles=[]; powerups=[]; catY=0; vy=0; cat.style.transform='translate(0,0)'; cat.classList.add('run');
-      scoreFloat=0; score=0; scoreEl.textContent='0'; pxPerSec=CONFIG.baseSpeed; worldX=0; t=0; fishUntil=0; chocoUntil=0; hideBanner();
+      obstacles=[]; powerups=[];
+      catY=0; vy=0; onGround=true; timeSinceGrounded=0; timeSinceJumpPressed=999;
+      cat.style.transform='translate(0,0)'; cat.classList.add('run');
+
+      scoreFloat=0; score=0; scoreEl.textContent='0';
+      pxPerSec=CONFIG.baseSpeed; worldX=0; t=0; fishUntil=0; chocoUntil=0; hideBanner();
+
       spawnAtX=randomGap(); nextFishAt=rand(...CONFIG.fishEveryMinMax); nextChocoAt=rand(...CONFIG.chocoEveryMinMax);
       over.classList.add('hidden');
     }
@@ -262,7 +259,7 @@
     function startGame(){
       startScreen.classList.add('hidden');
       resetGame();
-      // Пожелание в начале игры
+      // Пожелание в начале
       setBanner('Удачки, Дашулик!','good');
       setTimeout(hideBanner, 1500);
 
@@ -276,6 +273,9 @@
 
     function update(dt){
       t+=dt;
+      timeSinceGrounded += dt;
+      timeSinceJumpPressed += dt;
+
       let speedMul=1, scoreMul=1; if(isFish()){ speedMul*=CONFIG.fishSpeedMul; scoreMul*=CONFIG.fishScoreMul; } if(isChoco()){ speedMul*=CONFIG.chocoSpeedMul; }
       pxPerSec=(CONFIG.baseSpeed+CONFIG.speedPerPoint*score)*speedMul;
 
@@ -283,9 +283,30 @@
       sky.style.backgroundPositionX=`-${worldX*.15}px, -${worldX*.21}px, -${worldX*.12}px, -${worldX*.18}px`;
       ground.style.backgroundPositionX=`-${worldX*.9}px`;
 
-      vy-=CONFIG.gravity*dt; catY=Math.max(0, catY+vy*dt); if(catY===0 && vy<0){ vy=0; cat.classList.add('run'); }
-      cat.style.transform=`translate(0px, ${-catY}px)`;
+      // Физика
+      const falling = vy < 0;
+      const g = falling ? CONFIG.gravity * CONFIG.fallGravityMul : CONFIG.gravity;
+      vy -= g * dt;
+      catY = Math.max(0, catY + vy * dt);
 
+      // Статус касания земли
+      if(catY === 0){
+        if(!onGround){ onGround = true; timeSinceGrounded = 0; cat.classList.add('run'); }
+        vy = Math.max(0, vy); // не уходим в минус при касании
+      }else{
+        onGround = false;
+      }
+
+      // Выполнить буферизированный/койот-джамп
+      const canCoyote = timeSinceGrounded <= CONFIG.coyoteTime;
+      const hasBuffered = timeSinceJumpPressed <= CONFIG.jumpBuffer;
+      if((onGround || canCoyote) && hasBuffered){
+        doJump();
+      }
+
+      cat.style.transform = `translate(0px, ${-catY}px)`;
+
+      // Спавн препятствий
       if(worldX>=spawnAtX){ if(!isFish()) spawnObstacle(); spawnAtX=worldX+randomGap(); }
 
       const catBox=getBox(cat, CONFIG.collisionPad);
@@ -293,9 +314,19 @@
       for(let i=obstacles.length-1;i>=0;i--){
         const o=obstacles[i];
         o.x-=pxPerSec*dt; o.el.style.transform=`translateX(${o.x}px)`;
-        if(isFish()){ const catFrontX=getEntityX(cat); if(o.x+o.w>catFrontX){ o.el.remove(); obstacles.splice(i,1); continue; } }
-        if(o.x+o.w<-20){ o.el.remove(); obstacles.splice(i,1); scoreFloat+=CONFIG.obstacleBonus*scoreMul; }
-        else { const obox=getBoxFrom(o.el, CONFIG.collisionPad); if(intersects(catBox, obox)){ gameOver(); return; } }
+
+        if(isFish()){
+          const catFrontX=getEntityX(cat);
+          if(o.x+o.w>catFrontX){ o.el.remove(); obstacles.splice(i,1); continue; }
+        }
+
+        if(o.x+o.w<-20){
+          o.el.remove(); obstacles.splice(i,1);
+          scoreFloat+=CONFIG.obstacleBonus*scoreMul;
+        }else{
+          const obox=getBoxFrom(o.el, CONFIG.collisionPad);
+          if(intersects(catBox, obox)){ gameOver(); return; }
+        }
       }
 
       for(let i=powerups.length-1;i>=0;i--){
@@ -303,10 +334,13 @@
         if(p.x+p.w<-20){ p.el.remove(); powerups.splice(i,1); continue; }
         const pbox=getBoxFrom(p.el,4);
         if(intersects(catBox,pbox)){
-          if(p.type==='fish'){ fishUntil=t+CONFIG.fishDuration; setBanner('🐟 Супер-рыбка! Скорость и очки ↑','good');
+          if(p.type==='fish'){
+            fishUntil=t+CONFIG.fishDuration; setBanner('🐟 Супер-рыбка! Скорость и очки ↑','good');
             const catFrontX=getEntityX(cat);
             obstacles=obstacles.filter(o=>{ if(o.x+o.w>catFrontX){ o.el.remove(); return false } return true });
-          } else { chocoUntil=t+CONFIG.chocoDuration; setBanner('КОТИКАМ НЕЛЬЗЯ ШОКОЛАД!!!!!','bad'); }
+          }else{
+            chocoUntil=t+CONFIG.chocoDuration; setBanner('КОТИКАМ НЕЛЬЗЯ ШОКОЛАД!!!!!','bad');
+          }
           p.el.remove(); powerups.splice(i,1); continue;
         }
       }
@@ -324,10 +358,25 @@
     function getEntityX(el){ const r=el.getBoundingClientRect(), s=scene.getBoundingClientRect(); return r.left-s.left; }
     function intersects(a,b){ return !(a.x+a.w<b.x||b.x+b.w<a.x||a.y+a.h<b.y||b.y+b.h<a.y); }
 
-    // Управление: тап по экрану (вся сцена) + ПК
-    function wantJump(){ if(catY===0 && running && !paused){ vy=CONFIG.jumpVelocity; cat.classList.remove('run'); } }
-    document.addEventListener('keydown',e=>{ if(e.code==='Space'||e.code==='KeyW'||e.code==='ArrowUp'){ e.preventDefault(); wantJump(); } else if(e.code==='KeyP'||e.code==='Escape'){ setPause(); } });
-    const jumpEv=e=>{ e.preventDefault&&e.preventDefault(); wantJump(); };
+    // Управление
+    function requestJump(){
+      if(!running || paused) return;
+      timeSinceJumpPressed = 0; // отметить нажатие — выполнится по правилам в update()
+      // если прямо сейчас стоим на земле — прыгнем немедленно
+      if(onGround){ doJump(); }
+    }
+    function doJump(){
+      vy = CONFIG.jumpVelocity;
+      cat.classList.remove('run');
+      onGround = false;
+      timeSinceJumpPressed = 999; // израсходовали буфер
+    }
+
+    document.addEventListener('keydown',e=>{
+      if(e.code==='Space'||e.code==='KeyW'||e.code==='ArrowUp'){ e.preventDefault(); requestJump(); }
+      else if(e.code==='KeyP'||e.code==='Escape'){ setPause(); }
+    });
+    const jumpEv=e=>{ e.preventDefault&&e.preventDefault(); requestJump(); };
     jumpZone.addEventListener('pointerdown', jumpEv, {passive:false});
     scene.addEventListener('pointerdown', jumpEv, {passive:false});
     jumpZone.addEventListener('touchstart', jumpEv, {passive:false});
@@ -339,7 +388,7 @@
     playBtn.addEventListener('click', startGame);
     againBtn.addEventListener('click', ()=>{ resetGame(); running=true; paused=false; pauseBtn.textContent='⏸'; last=performance.now(); raf=requestAnimationFrame(loop); });
 
-    // Ресайз/перерисовка
+    // Ресайз
     let resizeTimer=0;
     addEventListener('resize', ()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(()=>{
       obstacles.forEach(o=>{ o.w=o.el.offsetWidth; o.h=o.el.offsetHeight; o.el.style.transform=`translateX(${o.x}px)`; });
