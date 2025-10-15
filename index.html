@@ -4,13 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Дашулькин Котобег 💖</title>
+  <title>Котобег – мобильная версия 💖</title>
   <style>
     :root{
       --bg:#0f1226; --fg:#fff; --accent:#ff4fd8; --accent-2:#7cf3ff;
       --ground:#1d2147; --obstacle:#ffcf4a; --shadow:#00000055; --tile:#181b39;
       --bad:#ff5a5a; --good:#76ffb0; --vh:1vh;
-      /* размеры под мобилу (переопределяются медиа-правилами) */
       --cat-size: clamp(52px, 14vmin, 100px);
       --obs-w: clamp(22px, 5.5vmin, 34px);
       --obs-h: clamp(54px, 13vmin, 80px);
@@ -41,8 +40,9 @@
       box-shadow:0 20px 50px var(--shadow), inset 0 0 0 1px #ffffff10;
       background: linear-gradient(180deg, #0e1230 0%, #0a0d25 55%, #090c20 100%);
       overflow:hidden; touch-action:none;
+      contain: paint; /* страховка от артефактов рендера */
     }
-    /* Мобильный: на весь экран + крупнее всё */
+    /* Мобильный: на весь экран */
     @media (hover:none) and (pointer:coarse){
       .container{ width:100vw; height:calc(var(--vh)*100); border-radius:0; box-shadow:none }
     }
@@ -70,8 +70,9 @@
       position:absolute; top:10px; left:10px; right:10px;
       display:flex; justify-content:space-between; align-items:center; z-index:5;
       font-size:var(--hud-font);
+      pointer-events:none; /* чтобы тап по верхам тоже прыгал */
     }
-    .pills{ display:flex; gap:10px }
+    .pills{ display:flex; gap:10px; pointer-events:auto; }
     .pill{
       background:#ffffff18; padding:.55em .9em; border-radius:999px;
       box-shadow: inset 0 0 0 1px #ffffff24; font-variant-numeric:tabular-nums;
@@ -80,7 +81,7 @@
       border:0; cursor:pointer; border-radius:14px; padding:.55em .8em;
       background:#ffffff18; color:var(--fg); font-weight:800;
       box-shadow: inset 0 0 0 1px #ffffff28; touch-action:manipulation;
-      font-size:clamp(16px, 4.8vmin, 20px)
+      font-size:clamp(16px, 4.8vmin, 20px); pointer-events:auto;
     }
     .banner{
       position:absolute; top:60px; left:50%; transform:translateX(-50%);
@@ -147,17 +148,7 @@
 
     /* Мобильные контролы */
     .jump-zone{ position:absolute; inset:0; z-index:4; background:transparent }
-    .jump-btn{
-      position:absolute; bottom:12px; right:12px; z-index:7;
-      border:0; border-radius:16px; padding:16px 22px; font-weight:900;
-      background:#ffffff1f; color:#fff; box-shadow: inset 0 0 0 1px #ffffff3a, 0 8px 18px #0009;
-      touch-action:manipulation; display:none; font-size:clamp(16px, 4.8vmin, 20px)
-    }
-    @media (hover:none) and (pointer:coarse){
-      .jump-btn{ display:block }
-      #pauseBtn{ padding:.65em 1em }
-      .btn{ padding:18px 24px }
-    }
+    /* Кнопку «Прыжок» полностью убрал — не рендерим её вовсе */
   </style>
 </head>
 <body>
@@ -177,12 +168,11 @@
       <div id="cat" class="entity run" aria-label="Котик">🐱</div>
       <div id="jumpZone" class="jump-zone" aria-hidden="true"></div>
     </div>
-    <button id="jumpBtn" class="jump-btn" aria-label="Прыжок">Прыжок ⤴</button>
 
     <section id="start" class="screen">
       <div>
         <div class="title">Котобег 🐾</div>
-        <p class="subtitle">Тапай по экрану или жми «Прыжок». Подбери 🐟, избегай 🍫!</p>
+        <p class="subtitle">Тапай по экрану. Подбери 🐟, избегай 🍫!</p>
         <button id="playBtn" class="btn">Играть</button>
         <div class="row" style="margin-top:12px">
           <div class="kbd">Пробел</div><div class="kbd">W</div><div class="kbd">↑</div><div class="kbd">Тап</div>
@@ -206,11 +196,11 @@
     function setVh(){ const vh = window.innerHeight*0.01; document.documentElement.style.setProperty('--vh', `${vh}px`); }
     setVh(); addEventListener('resize', setVh); addEventListener('orientationchange', setVh);
 
-    // --- Баланс (под крупную моб. сцену) ---
+    // --- Баланс ---
     const CONFIG = {
       baseSpeed: 250, speedPerPoint: 0.30,
-      gravity: 2300, jumpVelocity: 820,         // чуть мощнее прыжок
-      minObstacleGap: 280, maxObstacleGap: 560, // шаги чуть шире
+      gravity: 2300, jumpVelocity: 820,
+      minObstacleGap: 280, maxObstacleGap: 560,
       scorePerSecond: 3, obstacleBonus: 8, collisionPad: 6,
       fishDuration: 1.5, fishSpeedMul: 1.6, fishScoreMul: 2.0,
       chocoDuration: 3.0, chocoSpeedMul: 1.35, chocoGapMul: 0.65,
@@ -227,7 +217,6 @@
     const pauseBtn = document.getElementById('pauseBtn');
     const banner = document.getElementById('banner');
     const jumpZone = document.getElementById('jumpZone');
-    const jumpBtn = document.getElementById('jumpBtn');
     const startScreen = document.getElementById('start');
     const playBtn = document.getElementById('playBtn');
     const over = document.getElementById('gameOver');
@@ -327,23 +316,23 @@
     function getEntityX(el){ const r=el.getBoundingClientRect(), s=scene.getBoundingClientRect(); return r.left-s.left; }
     function intersects(a,b){ return !(a.x+a.w<b.x||b.x+b.w<a.x||a.y+a.h<b.y||b.y+b.h<a.y); }
 
-    // Управление
+    // Управление: тап по экрану (вся сцена)
     function wantJump(){ if(catY===0 && running && !paused){ vy=CONFIG.jumpVelocity; cat.classList.remove('run'); } }
     document.addEventListener('keydown',e=>{ if(e.code==='Space'||e.code==='KeyW'||e.code==='ArrowUp'){ e.preventDefault(); wantJump(); } else if(e.code==='KeyP'||e.code==='Escape'){ setPause(); } });
     const jumpEv=e=>{ e.preventDefault&&e.preventDefault(); wantJump(); };
+    // надёжные слушатели на мобильных/ПК
     jumpZone.addEventListener('pointerdown', jumpEv, {passive:false});
     scene.addEventListener('pointerdown', jumpEv, {passive:false});
     jumpZone.addEventListener('touchstart', jumpEv, {passive:false});
     scene.addEventListener('touchstart', jumpEv, {passive:false});
     jumpZone.addEventListener('click', jumpEv, {passive:false});
     scene.addEventListener('click', jumpEv, {passive:false});
-    jumpBtn.addEventListener('pointerdown', jumpEv, {passive:false});
-    jumpBtn.addEventListener('click', jumpEv, {passive:false});
+
     pauseBtn.addEventListener('click', ()=>setPause());
     playBtn.addEventListener('click', startGame);
     againBtn.addEventListener('click', ()=>{ resetGame(); running=true; paused=false; pauseBtn.textContent='⏸'; last=performance.now(); raf=requestAnimationFrame(loop); });
 
-    // Ресайз
+    // Ресайз/перерисовка
     let resizeTimer=0;
     addEventListener('resize', ()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(()=>{
       obstacles.forEach(o=>{ o.w=o.el.offsetWidth; o.h=o.el.offsetHeight; o.el.style.transform=`translateX(${o.x}px)`; });
@@ -352,4 +341,3 @@
   </script>
 </body>
 </html>
-ы
