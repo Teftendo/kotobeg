@@ -184,26 +184,26 @@
 
     // --- Баланс ---
     const CONFIG = {
-      baseSpeed: 250, speedPerPoint: 0.30,
-      gravity: 3000,
-      jumpVelocity: 810,
-      fallGravityMul: 1.55,
-      coyoteTime: 0.18,
-      jumpBuffer: 0.22,
-      nearGroundHeight: 56,
-      nearGroundPull: 1.34,
+    baseSpeed: 250, speedPerPoint: 0.30,
+    gravity: 3000,            // без изменений
+    jumpVelocity: 810,        // без изменений
+    fallGravityMul: 1.22,     // было 1.55 → падение мягче
+    coyoteTime: 0.18,
+    jumpBuffer: 0.22,
+    nearGroundHeight: 56,
+    nearGroundPull: 1.06,     // было 1.34 → меньше «магнита к земле»
 
-      // масштабирование гравитации от скорости
-      gravityScaleMin: 0.9,
-      gravityScaleMax: 1.8,
-      gravitySpeedExp: 1.0,
+    // масштабирование гравитации от скорости
+    gravityScaleMin: 0.9,
+    gravityScaleMax: 1.35,    // было 1.8 → меньше рост g на высокой скорости
+    gravitySpeedExp: 0.85,    // было 1.0 → мягче зависимость от скорости
 
-      minObstacleGap: 280, maxObstacleGap: 560,
-      scorePerSecond: 3.45, obstacleBonus: 8, collisionPad: 6,
-      fishDuration: 1.5, fishSpeedMul: 1.6, fishScoreMul: 2.0,
-      chocoDuration: 3.0, chocoSpeedMul: 1.35, chocoGapMul: 0.65,
-      fishEveryMinMax: [5.5*1.1, 11*1.1],
-      chocoEveryMinMax: [13.2*1.1, 22*1.1]
+    minObstacleGap: 280, maxObstacleGap: 560,
+    scorePerSecond: 3.45, obstacleBonus: 8, collisionPad: 6,
+    fishDuration: 1.5, fishSpeedMul: 1.6, fishScoreMul: 2.0,
+    chocoDuration: 3.0, chocoSpeedMul: 1.35, chocoGapMul: 0.65,
+    fishEveryMinMax: [5.5*1.1, 11*1.1],
+    chocoEveryMinMax: [13.2*1.1, 22*1.1]
     };
 
     // --- DOM ---
@@ -305,8 +305,8 @@
       let g = CONFIG.gravity * speedScale * (falling ? CONFIG.fallGravityMul : 1);
 
       // «Магнит» к земле — финальная фаза падения быстрее
-      if (falling && catY < CONFIG.nearGroundHeight) {
-        g *= CONFIG.nearGroundPull;
+      if (falling && Math.abs(vy) < CONFIG.apexHangVy) {
+      g *= CONFIG.apexHangMul;
       }
 
       vy -= g * dt;
