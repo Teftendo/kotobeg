@@ -185,10 +185,19 @@
     // --- Баланс ---
     const CONFIG = {
       baseSpeed: 250, speedPerPoint: 0.30,
-      gravity: 2300, jumpVelocity: 820,
-      fallGravityMul: 1.25,     // быстрее падаем => быстрее готов к новому прыжку
-      coyoteTime: 0.12,         // 120 мс после схода с земли всё ещё можно прыгнуть
-      jumpBuffer: 0.15,         // 150 мс до касания — буфер нажатия
+      gravity: 3000,
+      jumpVelocity: 810,
+      fallGravityMul: 1.55,
+      coyoteTime: 0.18,
+      jumpBuffer: 0.22,
+      nearGroundHeight: 56,
+      nearGroundPull: 1.34,
+
+      // масштабирование гравитации от скорости
+      gravityScaleMin: 0.9,
+      gravityScaleMax: 1.8,
+      gravitySpeedExp: 1.0,
+
       minObstacleGap: 280, maxObstacleGap: 560,
       scorePerSecond: 3.45, obstacleBonus: 8, collisionPad: 6,
       fishDuration: 1.5, fishSpeedMul: 1.6, fishScoreMul: 2.0,
@@ -259,7 +268,6 @@
     function startGame(){
       startScreen.classList.add('hidden');
       resetGame();
-      // Пожелание в начале
       setBanner('Удачки, Дашулик!','good');
       setTimeout(hideBanner, 1500);
 
@@ -283,17 +291,37 @@
       sky.style.backgroundPositionX=`-${worldX*.15}px, -${worldX*.21}px, -${worldX*.12}px, -${worldX*.18}px`;
       ground.style.backgroundPositionX=`-${worldX*.9}px`;
 
-      // Физика
+      // --- Физика
       const falling = vy < 0;
-      const g = falling ? CONFIG.gravity * CONFIG.fallGravityMul : CONFIG.gravity;
-      vy -= g * dt;
-      catY = Math.max(0, catY + vy * dt);
 
-      // Статус касания земли
-      if(catY === 0){
-        if(!onGround){ onGround = true; timeSinceGrounded = 0; cat.classList.add('run'); }
-        vy = Math.max(0, vy); // не уходим в минус при касании
-      }else{
+      // Масштаб гравитации от текущей горизонтальной скорости котика
+      const speedScaleRaw = pxPerSec / CONFIG.baseSpeed;
+      const speedScale = Math.max(
+        CONFIG.gravityScaleMin,
+        Math.min(CONFIG.gravityScaleMax, Math.pow(speedScaleRaw, CONFIG.gravitySpeedExp))
+      );
+
+      // Базовая гравитация с учётом фазы (падение/взлёт) и масштабирования от скорости
+      let g = CONFIG.gravity * speedScale * (falling ? CONFIG.fallGravityMul : 1);
+
+      // «Магнит» к земле — финальная фаза падения быстрее
+      if (falling && catY < CONFIG.nearGroundHeight) {
+        g *= CONFIG.nearGroundPull;
+      }
+
+      vy -= g * dt;
+      catY = catY + vy * dt;
+
+      // Обработка контакта с землёй — ВАЖНО
+      if (catY <= 0) {
+        catY = 0;
+        if (vy < 0) vy = 0;
+        if (!onGround) {
+          onGround = true;
+          cat.classList.add('run');
+        }
+        timeSinceGrounded = 0;
+      } else {
         onGround = false;
       }
 
@@ -362,8 +390,7 @@
     function requestJump(){
       if(!running || paused) return;
       timeSinceJumpPressed = 0; // отметить нажатие — выполнится по правилам в update()
-      // если прямо сейчас стоим на земле — прыгнем немедленно
-      if(onGround){ doJump(); }
+      if(onGround){ doJump(); } // если стоим на земле — прыгнем немедленно
     }
     function doJump(){
       vy = CONFIG.jumpVelocity;
