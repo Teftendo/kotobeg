@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Котобег – мобильная версия 💖</title>
+  <title>Дашулькин Котобег💖</title>
   <style>
     :root{
       --bg:#0f1226; --fg:#fff; --accent:#ff4fd8; --accent-2:#7cf3ff;
@@ -40,7 +40,7 @@
       box-shadow:0 20px 50px var(--shadow), inset 0 0 0 1px #ffffff10;
       background: linear-gradient(180deg, #0e1230 0%, #0a0d25 55%, #090c20 100%);
       overflow:hidden; touch-action:none;
-      contain: paint; /* страховка от артефактов рендера */
+      contain: paint;
     }
     /* Мобильный: на весь экран */
     @media (hover:none) and (pointer:coarse){
@@ -70,7 +70,7 @@
       position:absolute; top:10px; left:10px; right:10px;
       display:flex; justify-content:space-between; align-items:center; z-index:5;
       font-size:var(--hud-font);
-      pointer-events:none; /* чтобы тап по верхам тоже прыгал */
+      pointer-events:none;
     }
     .pills{ display:flex; gap:10px; pointer-events:auto; }
     .pill{
@@ -148,7 +148,6 @@
 
     /* Мобильные контролы */
     .jump-zone{ position:absolute; inset:0; z-index:4; background:transparent }
-    /* Кнопку «Прыжок» полностью убрал — не рендерим её вовсе */
   </style>
 </head>
 <body>
@@ -172,11 +171,8 @@
     <section id="start" class="screen">
       <div>
         <div class="title">Котобег 🐾</div>
-        <p class="subtitle">Тапай по экрану. Подбери 🐟, избегай 🍫!</p>
+        <p class="subtitle">Подбери 🐟 — суперскорость и быстрые очки. Избегай 🍫 — станет сложнее!</p>
         <button id="playBtn" class="btn">Играть</button>
-        <div class="row" style="margin-top:12px">
-          <div class="kbd">Пробел</div><div class="kbd">W</div><div class="kbd">↑</div><div class="kbd">Тап</div>
-        </div>
       </div>
     </section>
 
@@ -201,10 +197,13 @@
       baseSpeed: 250, speedPerPoint: 0.30,
       gravity: 2300, jumpVelocity: 820,
       minObstacleGap: 280, maxObstacleGap: 560,
-      scorePerSecond: 3, obstacleBonus: 8, collisionPad: 6,
+      scorePerSecond: 3.45,           // +15% к прежним 3.0
+      obstacleBonus: 8, collisionPad: 6,
       fishDuration: 1.5, fishSpeedMul: 1.6, fishScoreMul: 2.0,
       chocoDuration: 3.0, chocoSpeedMul: 1.35, chocoGapMul: 0.65,
-      fishEveryMinMax: [5.5, 11], chocoEveryMinMax: [13.2, 22]
+      // реже ещё на 10%
+      fishEveryMinMax: [5.5*1.1, 11*1.1],        // было [5.5, 11]
+      chocoEveryMinMax: [13.2*1.1, 22*1.1]       // было [13.2, 22]
     };
 
     // --- DOM ---
@@ -260,7 +259,16 @@
       el.style.transform=`translateX(${startX}px)`; powerups.push(obj);
     }
 
-    function startGame(){ startScreen.classList.add('hidden'); resetGame(); running=true; paused=false; pauseBtn.textContent='⏸'; last=performance.now(); raf=requestAnimationFrame(loop); }
+    function startGame(){
+      startScreen.classList.add('hidden');
+      resetGame();
+      // Пожелание в начале игры
+      setBanner('Удачки Дашулик!','good');
+      setTimeout(hideBanner, 1500);
+
+      running=true; paused=false; pauseBtn.textContent='⏸';
+      last=performance.now(); raf=requestAnimationFrame(loop);
+    }
     function setPause(state){ if(!running)return; paused=state??!paused; pauseBtn.textContent=paused?'▶':'⏸'; if(!paused){ last=performance.now(); raf=requestAnimationFrame(loop);} }
     function gameOver(){ running=false; paused=false; cat.classList.remove('run'); vy=0; hideBanner(); if(score>best){ best=score; localStorage.setItem('cat_best',String(best)); } finalScoreEl.textContent=score; finalBestEl.textContent=best; over.classList.remove('hidden'); }
 
@@ -316,11 +324,10 @@
     function getEntityX(el){ const r=el.getBoundingClientRect(), s=scene.getBoundingClientRect(); return r.left-s.left; }
     function intersects(a,b){ return !(a.x+a.w<b.x||b.x+b.w<a.x||a.y+a.h<b.y||b.y+b.h<a.y); }
 
-    // Управление: тап по экрану (вся сцена)
+    // Управление: тап по экрану (вся сцена) + ПК
     function wantJump(){ if(catY===0 && running && !paused){ vy=CONFIG.jumpVelocity; cat.classList.remove('run'); } }
     document.addEventListener('keydown',e=>{ if(e.code==='Space'||e.code==='KeyW'||e.code==='ArrowUp'){ e.preventDefault(); wantJump(); } else if(e.code==='KeyP'||e.code==='Escape'){ setPause(); } });
     const jumpEv=e=>{ e.preventDefault&&e.preventDefault(); wantJump(); };
-    // надёжные слушатели на мобильных/ПК
     jumpZone.addEventListener('pointerdown', jumpEv, {passive:false});
     scene.addEventListener('pointerdown', jumpEv, {passive:false});
     jumpZone.addEventListener('touchstart', jumpEv, {passive:false});
