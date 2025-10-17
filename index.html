@@ -268,8 +268,8 @@
     function startGame(){
       startScreen.classList.add('hidden');
       resetGame();
-      setBanner('Удачки, Дашулик!','good');
-      setTimeout(hideBanner, 1500);
+      setBanner('Если дойдешь до 500, и отправишь скрин куплю пачку киндер сюрприза:)','good');
+      setTimeout(hideBanner, 3000);
 
       running=true; paused=false; pauseBtn.textContent='⏸';
       last=performance.now(); raf=requestAnimationFrame(loop);
